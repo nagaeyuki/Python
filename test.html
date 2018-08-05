@@ -1,0 +1,77 @@
+<header class="hero-unit" id="banner">
+  <div class="container">
+    <h1>顔認識します</h1>
+  </div>
+</header>
+
+<div class="container">
+  <div class="row">
+    <div class="col-lg-12">
+      <br>
+      <button class="btn btn-lg btn-success" onclick="startVideo()">Start</button>
+      <br>
+      <canvas style="display:true;" width="640" height="480"></canvas>
+      <video id="local_video" width="640" height="480" autoplay style="display: true;"></video>
+
+    </div>
+  </form>
+</div>
+
+<script type="text/javascript">
+  var localVideo  = document.getElementById('local_video');
+  var canvas = document.querySelector('canvas');
+  var ctx = canvas.getContext('2d');
+  var localStream = null;
+
+  // 顔認識結果を四角い枠で描画するための座標
+  var x = []
+
+  var base64 = ''
+
+  // ローカルビデオをスタートさせる
+  function startVideo() {
+    navigator.mediaDevices.getUserMedia({video: true, audio: false})
+    .then(function (stream) { // success
+      localStream = stream;
+      localVideo.src  = window.URL.createObjectURL(localStream);
+    }).catch(function (error) { // error
+      console.error('mediaDevice.getUserMedia() error:', error);
+      return;
+    });
+  }
+
+  // カメラ画像キャプチャ
+  var capture = function() {
+    if (localStream) {
+      ctx.drawImage(localVideo, 0, 0);
+      ctx.beginPath();
+      ctx.rect(x[0], x[1], x[2], x[3]);
+      ctx.stroke();
+      base64 = canvas.toDataURL('image/webp');
+    }
+  }
+
+  //認識
+  var detect = function() {
+    var request = {
+      url: 'http://localhost:9000/api/detect',
+      method: 'POST',
+      data: {
+        image: base64.replace(/^.*,/, '')
+      }
+    };
+    $.ajax(request).done(function(data){
+       console.log(data)
+       if(data.face) {
+         for(var i=0; i<data.face.split(' ').length; i++){
+           x[i] = data.face.split(' ')[i] - 0 ;
+         }
+         console.log(data.face.split(' '));
+       }
+    });
+  }
+
+  setInterval("capture()",100);
+  setInterval("detect()",500);
+
+</script>
